@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  phone       String   @unique
+  password    String
+  is_admin    Boolean  @default(false)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  roles       UserRole[]
+  indents     Indent[]
+  mis         MI[]
+  rfqs        RFQ[]
+  items       Item[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  permissions Json
+
+  users       UserRole[]
+}
+
+model UserRole {
+  id      String @id @default(uuid())
+  user    User   @relation(fields: [user_id], references: [id])
+  user_id String
+  role    Role   @relation(fields: [role_id], references: [id])
+  role_id String
+
+  @@unique([user_id, role_id])
+}
+
+model Item {
+  id                      String   @id @default(uuid())
+  item_id                 String   @unique
+  company_id              String
+  item_code               String
+  name                    String
+  description             String?
+  unit                    String
+  price                   Float
+  created_by_user_id      String
+  last_updated_by_user_id String
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  is_deleted              Boolean  @default(false)
+
+  created_by   User         @relation(fields: [created_by_user_id], references: [id])
+  indent_items IndentItem[]
+  mi_items     MIItem[]
+  rfq_items    RFQItem[]
+}
+
+model Indent {
+  id                 String       @id @default(uuid())
+  indent_number      String       @unique
+  company_id         String
+  created_by_user_id String
+  status             IndentStatus @default(DRAFT)
+  remarks            String?
+  created_at         DateTime     @default(now())
+  updated_at         DateTime     @updatedAt
+
+  created_by User         @relation(fields: [created_by_user_id], references: [id])
+  items      IndentItem[]
+  mis        MI[]
+}
+
+model IndentItem {
+  id        String  @id @default(uuid())
+  indent_id String
+  item_id   String
+  quantity  Float
+  remarks   String?
+
+  indent Indent @relation(fields: [indent_id], references: [id])
+  item   Item   @relation(fields: [item_id], references: [id])
+}
+
+model MI {
+  id                String   @id @default(uuid())
+  mi_number         String   @unique
+  indent_id         String?
+  issued_by_user_id String
+  status            MIStatus @default(DRAFT)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  indent    Indent? @relation(fields: [indent_id], references: [id])
+  items     MIItem[]
+  user      User    @relation(fields: [issued_by_user_id], references: [id])
+}
+model MIItem {
+  id       String @id @default(uuid())
+  mi_id    String
+  item_id  String
+  quantity Float
+
+  mi   MI   @relation(fields: [mi_id], references: [id])
+  item Item @relation(fields: [item_id], references: [id])
+}
+
+model Vendor {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String   @unique
+  address      String?
+  company_name String
+  password     String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  rfq_vendors RFQVendor[]
+  quotes      Quote[]
+}
+
+model RFQ {
+  id                 String    @id @default(uuid())
+  rfq_number         String    @unique
+  company_id         String
+  created_by_user_id String
+  status             RFQStatus @default(DRAFT)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  created_by User        @relation(fields: [created_by_user_id], references: [id])
+  items      RFQItem[]
+  vendors    RFQVendor[]
+  quotes     Quote[]
+}
+
+model RFQItem {
+  id       String @id @default(uuid())
+  rfq_id   String
+  item_id  String
+  quantity Float
+
+  rfq  RFQ  @relation(fields: [rfq_id], references: [id])
+  item Item @relation(fields: [item_id], references: [id])
+}
+
+model RFQVendor {
+  id        String @id @default(uuid())
+  rfq_id    String
+  vendor_id String
+
+  rfq    RFQ    @relation(fields: [rfq_id], references: [id])
+  vendor Vendor @relation(fields: [vendor_id], references: [id])
+
+  @@unique([rfq_id, vendor_id])
+}
+
+model Quote {
+  id         String   @id @default(uuid())
+  rfq_id     String
+  vendor_id  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  rfq    RFQ       @relation(fields: [rfq_id], references: [id])
+  vendor Vendor    @relation(fields: [vendor_id], references: [id])
+  items  QuoteItem[]
+
+  @@unique([rfq_id, vendor_id])
+}
+
+model QuoteItem {
+  id            String @id @default(uuid())
+  quote_id      String
+  item_id       String
+  quantity      Float
+  per_unit_rate Float
+
+  quote Quote @relation(fields: [quote_id], references: [id])
+}
+
+enum IndentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum MIStatus {
+  DRAFT
+  ISSUED
+}
+
+enum RFQStatus {
+  DRAFT
+  SENT
+  CLOSED
+}
