@@ -1,98 +1,400 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Procurement Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> Backend system for a procurement platform.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## System Architecture
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+Client / Postman
+       │
+       ▼
+NestJS App (API Gateway)
+JWT Auth · RBAC Guard · Validation · Rate Limiting · Pino Logging
+       │
+       ├── User Module        (Register, Login, Roles)
+       ├── Auth Module        (JWT Strategy)
+       ├── Roles Module       (Permissions per entity)
+       ├── Item Module        (CRUD + Lock Logic)
+       ├── Indent Module      (DRAFT → SUBMITTED → APPROVED/REJECTED)
+       ├── MI Module          (DRAFT → ISSUED)
+       ├── Vendor Module      (Auth + Quotes)
+       └── RFQ Module         (DRAFT → SENT → CLOSED + Quotes)
+                │
+                ▼
+          Prisma ORM
+                │
+                ▼
+        PostgreSQL Database
 ```
 
-## Compile and run the project
+---
+
+## Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| **TypeScript** | Primary language |
+| **NestJS** | Backend framework |
+| **PostgreSQL** | Relational database |
+| **Prisma ORM** | Database access and migrations |
+| **JWT** | Authentication (Users + Vendors) |
+| **bcrypt** | Password hashing |
+| **Swagger** | API documentation |
+| **Pino** | Structured HTTP logging |
+| **Docker** | Containerization |
+| **class-validator** | DTO validation |
+| **@nestjs/throttler** | Rate limiting |
+
+---
+
+## Features Implemented
+
+### Core
+- JWT Authentication for Users and Vendors (separate flows)
+- Role-Based Access Control (RBAC) with per-entity permissions
+- Admin User — bypasses all role/permission checks
+- Normal User — access controlled via assigned roles
+- User registration, login via email or phone
+- Activate/Deactivate users
+- Assign roles to users (at least one role required)
+
+### Modules
+- **Item** — CRUD with lock logic (non-editable once used in Indent/MI/RFQ), soft delete
+- **Indent** — Full lifecycle: DRAFT → SUBMITTED → APPROVED/REJECTED
+- **MI (Material Issue)** — DRAFT → ISSUED, optional link to approved Indent
+- **Vendor** — Independent auth, quote submission on RFQ
+- **RFQ** — DRAFT → SENT → CLOSED, vendor quote with quantity and per_unit_rate
+
+### API Quality
+- RESTful APIs for all modules
+- DTO validation on all endpoints
+- Global exception filter for consistent error responses
+- Pagination on all listing APIs
+- Filtering support (company_id, name, status)
+
+### Bonus
+- Docker + Docker Compose setup
+- Pino structured logging (every request logged with method, URL, status, response time)
+- Swagger API documentation
+- Rate limiting (100 requests per minute per IP)
+- Soft delete for Items
+
+---
+
+## Prerequisites
+
+- Node.js v20+
+- Docker Desktop
+- npm
+
+---
+
+## Setup Instructions
+
+### 1. Clone the repository
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/techyharshitalakhotiya/procurement_backend.git
+cd procurement_backend
 ```
 
-## Run tests
+### 2. Install dependencies
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
+### 3. Set up environment variables
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Create a `.env` file in the root directory:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```env
+DATABASE_URL="postgresql://procurement:procurement123@localhost:5432/procurement_db"
+JWT_SECRET="procurement_jwt_secret_key_2024"
+JWT_EXPIRES_IN="7d"
+PORT=3000
+```
+
+### 4. Start PostgreSQL with Docker
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker run --name procurement-postgres \
+  -e POSTGRES_USER=procurement \
+  -e POSTGRES_PASSWORD=procurement123 \
+  -e POSTGRES_DB=procurement_db \
+  -p 5432:5432 -d postgres:15
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 5. Run database migrations
 
-## Resources
+```bash
+npx prisma migrate dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### 6. Generate Prisma client
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npx prisma generate
+```
 
-## Support
+### 7. Start the application
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run start:dev
+```
 
-## Stay in touch
+### 8. Access Swagger documentation
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
+http://localhost:3000/api/docs
+```
 
-## License
+---
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Running with Docker Compose
+
+```bash
+docker-compose up --build
+```
+
+This starts both the app and PostgreSQL together.
+
+---
+
+## API Documentation
+
+### Base URL
+```
+http://localhost:3000
+```
+
+### Authentication
+All protected endpoints require a Bearer token in the Authorization header:
+```
+Authorization: Bearer <your_jwt_token>
+```
+
+---
+
+### Auth
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/auth/login` | Login with email/phone + password | No |
+
+**Login Body:**
+```json
+{
+  "identifier": "admin@test.com",
+  "password": "admin123"
+}
+```
+
+---
+
+### Users
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/users/register` | Register new user | No |
+| GET | `/users` | Get all users | JWT |
+| GET | `/users/:id` | Get user by ID | JWT |
+| PATCH | `/users/:id/toggle-active` | Activate/Deactivate user | Admin only |
+| POST | `/users/:id/assign-role/:roleId` | Assign role to user | Admin only |
+
+---
+
+### Roles
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/roles` | Create role with permissions | Admin only |
+| GET | `/roles` | Get all roles | JWT |
+| GET | `/roles/:id` | Get role by ID | JWT |
+| PATCH | `/roles/:id` | Update role | Admin only |
+| DELETE | `/roles/:id` | Delete role | Admin only |
+
+**Create Role Body:**
+```json
+{
+  "name": "Manager",
+  "description": "Can manage procurement",
+  "permissions": {
+    "item": { "create": true, "read": true, "update": true, "delete": true },
+    "indent": { "create": true, "read": true, "update": true, "delete": false },
+    "mi": { "create": true, "read": true, "update": true, "delete": false },
+    "rfq": { "create": true, "read": true, "update": true, "delete": false },
+    "vendor": { "create": false, "read": true, "update": false, "delete": false }
+  }
+}
+```
+
+---
+
+### Items
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/items` | Create item | JWT + Permission |
+| GET | `/items` | Get all items (paginated) | JWT + Permission |
+| GET | `/items/:id` | Get item by ID | JWT + Permission |
+| PATCH | `/items/:id` | Update item (locked if used) | JWT + Permission |
+| DELETE | `/items/:id` | Soft delete item | JWT + Permission |
+
+**Query Params for GET /items:**
+- `company_id` — filter by company
+- `name` — filter by name
+- `page` — page number (default: 1)
+- `limit` — items per page (default: 10)
+
+---
+
+### Indents
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/indents` | Create indent with items | JWT + Permission |
+| GET | `/indents` | Get all indents (paginated) | JWT + Permission |
+| GET | `/indents/:id` | Get indent by ID | JWT + Permission |
+| PATCH | `/indents/:id` | Update indent (DRAFT only) | JWT + Permission |
+| PATCH | `/indents/:id/submit` | Submit indent | JWT + Permission |
+| PATCH | `/indents/:id/approve` | Approve indent | JWT + Permission |
+| PATCH | `/indents/:id/reject` | Reject indent | JWT + Permission |
+
+**Query Params for GET /indents:**
+- `company_id` — filter by company
+- `status` — filter by status (DRAFT/SUBMITTED/APPROVED/REJECTED)
+- `page`, `limit`
+
+---
+
+### MI (Material Issue)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/mi` | Create MI | JWT + Permission |
+| GET | `/mi` | Get all MIs (paginated) | JWT + Permission |
+| GET | `/mi/:id` | Get MI by ID | JWT + Permission |
+| PATCH | `/mi/:id/issue` | Issue material | JWT + Permission |
+
+---
+
+### Vendors
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/vendors/register` | Register vendor | No |
+| POST | `/vendors/login` | Vendor login | No |
+| GET | `/vendors` | Get all vendors (paginated) | JWT + Permission |
+| GET | `/vendors/:id` | Get vendor by ID | JWT + Permission |
+| PATCH | `/vendors/:id` | Update vendor | JWT + Permission |
+
+---
+
+### RFQ (Request for Quotation)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/rfq` | Create RFQ with items | JWT + Permission |
+| GET | `/rfq` | Get all RFQs (paginated) | JWT + Permission |
+| GET | `/rfq/:id` | Get RFQ by ID | JWT + Permission |
+| PATCH | `/rfq/:id/attach-vendors` | Attach vendors to RFQ | JWT + Permission |
+| PATCH | `/rfq/:id/send` | Send RFQ to vendors | JWT + Permission |
+| PATCH | `/rfq/:id/close` | Close RFQ | JWT + Permission |
+| POST | `/rfq/:id/quote` | Submit vendor quote | JWT + Permission |
+
+---
+
+## Project Structure
+
+```
+src/
+├── common/
+│   ├── decorators/
+│   │   ├── current-user.decorator.ts
+│   │   └── permission.decorator.ts
+│   ├── filters/
+│   │   └── http-exception.filter.ts
+│   └── guards/
+│       ├── admin.guard.ts
+│       ├── jwt-auth.guard.ts
+│       └── permissions.guard.ts
+├── modules/
+│   ├── auth/
+│   │   ├── strategies/
+│   │   │   └── jwt.strategy.ts
+│   │   ├── auth.controller.ts
+│   │   ├── auth.module.ts
+│   │   └── auth.service.ts
+│   ├── user/
+│   ├── roles/
+│   ├── item/
+│   ├── indent/
+│   ├── mi/
+│   ├── vendor/
+│   └── rfq/
+├── prisma/
+│   ├── prisma.module.ts
+│   └── prisma.service.ts
+└── main.ts
+```
+
+---
+
+## Database Schema
+
+### Models
+- **User** — id, name, email, phone, password, is_admin, is_active, timestamps
+- **Role** — id, name, description, permissions (JSON), timestamps
+- **UserRole** — junction table for user-role mapping
+- **Item** — id, item_id, company_id, item_code, name, description, unit, price, created_by, timestamps, is_deleted
+- **Indent** — id, indent_number, company_id, created_by, status, remarks, timestamps
+- **IndentItem** — id, indent_id, item_id, quantity, remarks
+- **MI** — id, mi_number, indent_id (optional), issued_by, status, timestamps
+- **MIItem** — id, mi_id, item_id, quantity
+- **Vendor** — id, name, email, phone, address, company_name, password, timestamps
+- **RFQ** — id, rfq_number, company_id, created_by, status, timestamps
+- **RFQItem** — id, rfq_id, item_id, quantity
+- **RFQVendor** — id, rfq_id, vendor_id
+- **Quote** — id, rfq_id, vendor_id, timestamps
+- **QuoteItem** — id, quote_id, item_id, quantity, per_unit_rate
+
+---
+
+## Assumptions Made
+
+1. Admin users are created directly in the database (no admin registration endpoint for security)
+2. A user must have at least one role assigned before accessing protected resources
+3. Items become locked (non-editable) once referenced in any Indent, MI, or RFQ
+4. An Indent must be in APPROVED status before an MI can be linked to it
+5. Vendors have a completely separate authentication flow from users
+6. Only vendors attached to an RFQ can submit quotes on it
+7. A vendor can only submit one quote per RFQ
+8. RFQ must be in SENT status for vendors to submit quotes
+9. company_id is treated as a string identifier (not linked to a Company model for simplicity)
+10. JWT tokens expire in 7 days
+11. Rate limiting is set to 100 requests per minute per IP
+
+---
+
+## Swagger Documentation
+
+After starting the application, visit:
+```
+http://localhost:3000/api/docs
+```
+
+All endpoints are documented with request/response schemas and can be tested directly from the browser.
+
+---
+
+## Environment Variables
+
+| Variable | Description | Example |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/db` |
+| `JWT_SECRET` | Secret key for JWT signing | `your_secret_key` |
+| `JWT_EXPIRES_IN` | JWT expiry duration | `7d` |
+| `PORT` | Application port | `3000` |
