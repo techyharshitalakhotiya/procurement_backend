@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -26,6 +26,37 @@ export class UserService {
         email: dto.email,
         phone: dto.phone,
         password: hashed,
+      },
+    });
+
+    const { password, ...result } = user;
+    return result;
+  }
+
+  async createAdmin(dto: CreateUserDto, secretKey: string) {
+    if (secretKey !== 'KRAYA_ADMIN_SECRET_2024') {
+      throw new ForbiddenException('Invalid secret key');
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: dto.email }, { phone: dto.phone }],
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Email or phone already exists');
+    }
+
+    const hashed = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        name: dto.name,
+        email: dto.email,
+        phone: dto.phone,
+        password: hashed,
+        is_admin: true,
       },
     });
 

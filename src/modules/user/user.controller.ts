@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Param, Body, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Patch, UseGuards, Headers } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 
@@ -13,6 +13,15 @@ export class UserController {
   @Post('register')
   register(@Body() dto: CreateUserDto) {
     return this.userService.create(dto);
+  }
+
+  @Post('create-admin')
+  @ApiHeader({ name: 'x-admin-secret', description: 'Secret key to create admin user' })
+  createAdmin(
+    @Body() dto: CreateUserDto,
+    @Headers('x-admin-secret') secretKey: string,
+  ) {
+    return this.userService.createAdmin(dto, secretKey);
   }
 
   @ApiBearerAuth()
